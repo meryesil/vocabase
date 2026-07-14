@@ -3,11 +3,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import confetti from 'canvas-confetti'
 import { api } from '@/api/client.js'
+import { useAuthStore } from '@/stores/auth.js'
 import { useVocabularyStore } from '@/stores/vocabulary.js'
 import AppNavbar from '@/components/AppNavbar.vue'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const vocab = useVocabularyStore()
 
 // Game / Study state
@@ -308,13 +310,24 @@ function fireMiniConfetti() {
   })
 }
 
+const examPrefix = computed(() => {
+  const goal = (auth.user?.exam_goal || '').toString().toLowerCase()
+  if (goal.includes('yds')) return 'YDS'
+  if (goal.includes('toefl')) return 'TOEFL'
+  if (goal.includes('ielts')) return 'IELTS'
+  if (goal.includes('kpss')) return 'KPSS'
+  if (goal.includes('other') || goal.includes('genel') || goal.includes('akademik')) return 'Akademik'
+  return 'YÖKDİL'
+})
+
 const academicRank = computed(() => {
   const xp = vocab.stats?.xp || 0
-  if (xp >= 4000) return { title: '👑 YÖKDİL Üstadı (Profesör)', next: null, color: '#f59e0b' }
-  if (xp >= 1500) return { title: '🎓 Doçent Adayı (Associate)', next: '👑 YÖKDİL Üstadı (4000 XP)', needed: 4000 - xp, color: '#ec4899' }
+  const p = examPrefix.value
+  if (xp >= 4000) return { title: `👑 ${p} Üstadı (Profesör)`, next: null, color: '#f59e0b' }
+  if (xp >= 1500) return { title: '🎓 Doçent Adayı (Associate)', next: `👑 ${p} Üstadı (4000 XP)`, needed: 4000 - xp, color: '#ec4899' }
   if (xp >= 500) return { title: '🔬 Kelime Araştırmacısı', next: '🎓 Doçent Adayı (1500 XP)', needed: 1500 - xp, color: '#3b82f6' }
   if (xp >= 100) return { title: '📖 Akademik Okur', next: '🔬 Kelime Araştırmacısı (500 XP)', needed: 500 - xp, color: '#10b981' }
-  return { title: '🌱 YÖKDİL Adayı (Beginner)', next: '📖 Akademik Okur (100 XP)', needed: 100 - xp, color: '#c084fc' }
+  return { title: `🌱 ${p} Adayı (Beginner)`, next: '📖 Akademik Okur (100 XP)', needed: 100 - xp, color: '#c084fc' }
 })
 
 function confirmExitMenu() {
@@ -360,10 +373,10 @@ function previousQuestion() {
             <div class="filter-item">
               <label>🎯 Soru Sayısı:</label>
               <select v-model.number="questionLimit" class="form-input select-sm">
-                <option :value="5">5 Soru (Hızlı Isınma)</option>
-                <option :value="10">10 Soru (Standart Quiz)</option>
-                <option :value="20">20 Soru (İleri Akademik)</option>
-                <option :value="30">30 Soru (YÖKDİL Kampı)</option>
+                <option :value="5">5 Soru - Kısa Pratik Seansı</option>
+                <option :value="10">10 Soru - Standart Akademik Test</option>
+                <option :value="20">20 Soru - Kapsamlı Bilgi Taraması</option>
+                <option :value="30">30 Soru - Yoğun Sınav Simülasyonu</option>
               </select>
             </div>
           </div>

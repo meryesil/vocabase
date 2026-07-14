@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { useVocabularyStore } from '@/stores/vocabulary.js'
@@ -8,16 +8,36 @@ const router = useRouter()
 const auth = useAuthStore()
 const vocab = useVocabularyStore()
 
+const theme = ref(localStorage.getItem('theme') || 'dark')
+
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  localStorage.setItem('theme', theme.value)
+  document.documentElement.setAttribute('data-theme', theme.value)
+}
+
+const examPrefix = computed(() => {
+  const goal = (auth.user?.exam_goal || '').toString().toLowerCase()
+  if (goal.includes('yds')) return 'YDS'
+  if (goal.includes('toefl')) return 'TOEFL'
+  if (goal.includes('ielts')) return 'IELTS'
+  if (goal.includes('kpss')) return 'KPSS'
+  if (goal.includes('other') || goal.includes('genel') || goal.includes('akademik')) return 'Akademik'
+  return 'YÖKDİL'
+})
+
 const academicRank = computed(() => {
   const xp = vocab.stats?.xp || 0
-  if (xp >= 4000) return { title: '👑 YÖKDİL Üstadı', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.4)', bg: 'rgba(245, 158, 11, 0.15)' }
+  const p = examPrefix.value
+  if (xp >= 4000) return { title: `👑 ${p} Üstadı`, color: '#f59e0b', border: 'rgba(245, 158, 11, 0.4)', bg: 'rgba(245, 158, 11, 0.15)' }
   if (xp >= 1500) return { title: '🎓 Doçent Adayı', color: '#ec4899', border: 'rgba(236, 72, 153, 0.4)', bg: 'rgba(236, 72, 153, 0.15)' }
   if (xp >= 500) return { title: '🔬 Araştırmacı', color: '#3b82f6', border: 'rgba(59, 130, 246, 0.4)', bg: 'rgba(59, 130, 246, 0.15)' }
   if (xp >= 100) return { title: '📖 Akademik Okur', color: '#10b981', border: 'rgba(16, 185, 129, 0.4)', bg: 'rgba(16, 185, 129, 0.15)' }
-  return { title: '🌱 YÖKDİL Adayı', color: '#c084fc', border: 'rgba(192, 132, 252, 0.4)', bg: 'rgba(192, 132, 252, 0.15)' }
+  return { title: `🌱 ${p} Adayı`, color: '#c084fc', border: 'rgba(192, 132, 252, 0.4)', bg: 'rgba(192, 132, 252, 0.15)' }
 })
 
 onMounted(async () => {
+  document.documentElement.setAttribute('data-theme', theme.value)
   if (auth.isAuthenticated && !vocab.stats) {
     await vocab.fetchStats()
   }
@@ -78,6 +98,14 @@ function logout() {
         </div>
 
         <div class="nav-user">
+          <button
+            class="btn btn-ghost btn-sm theme-toggle-btn"
+            @click="toggleTheme"
+            :title="theme === 'dark' ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'"
+          >
+            {{ theme === 'dark' ? '☀️' : '🌙' }}
+          </button>
+
           <div v-if="vocab.stats" class="gamify-badges">
             <span class="badge-item streak-badge" title="Günlük Seri">
               🔥 <strong>{{ vocab.stats.streakDays || 0 }}</strong> Gün
@@ -277,6 +305,11 @@ function logout() {
 }
 
 /* Responsive Rules */
+.theme-toggle-btn {
+  font-size: 1.15rem;
+  padding: 0.35rem 0.6rem;
+}
+
 @media (max-width: 992px) {
   .nav-link {
     padding: 0.4rem 0.6rem;
@@ -285,18 +318,28 @@ function logout() {
 }
 
 @media (max-width: 768px) {
+  .navbar-inner {
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+  }
   .nav-links {
     display: none;
   }
   .streak-badge {
     display: none;
   }
+  .user-name {
+    display: none;
+  }
+  .nav-user {
+    gap: 0.4rem;
+  }
   .rank-badge-top {
     font-size: 0.68rem;
     padding: 0.18rem 0.45rem;
   }
   .logo-text {
-    font-size: 1.05rem;
+    font-size: 1.02rem;
     gap: 0.35rem;
   }
   .mobile-bottom-nav {
@@ -338,6 +381,15 @@ function logout() {
   }
   .mob-icon {
     font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .rank-badge-top {
+    display: none;
+  }
+  .logo-text {
+    font-size: 0.95rem;
   }
 }
 </style>

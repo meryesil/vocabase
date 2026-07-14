@@ -125,6 +125,14 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     }
   }
 
+  async function markAsLearned(id) {
+    const res = await api(`/words/${id}/learn`, { method: 'POST' })
+    await fetchSections()
+    await fetchAllWords()
+    await fetchStats()
+    return res
+  }
+
   async function fetchStats() {
     const data = await api('/quiz/stats')
     stats.value = data.stats
@@ -149,6 +157,7 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     toggleFavorite,
     batchImport,
     deleteWord,
+    markAsLearned,
     fetchStats,
   }
 })

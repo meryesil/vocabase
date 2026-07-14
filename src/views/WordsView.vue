@@ -75,8 +75,15 @@ const filteredWords = computed(() => {
     list = list.filter((w) => w.is_favorite === 1)
   }
 
-  return list
+  return list.slice().sort((a, b) => {
+    return (b.is_favorite || 0) - (a.is_favorite || 0) || new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  })
 })
+
+async function markLearned(word) {
+  if (!confirm(`"${word.english}" kelimesini Öğrenildi olarak işaretleyip Öğrenilenler defterine taşımak istiyor musunuz?`)) return
+  await vocab.markAsLearned(word.id)
+}
 
 async function toggleFav(word) {
   const newStatus = await vocab.toggleFavorite(word.id)
@@ -291,6 +298,14 @@ async function handleJsonImport() {
               <span v-for="n in 3" :key="n" class="dot" :class="{ filled: n <= (word.difficulty || 2) }"></span>
             </div>
             <div class="card-actions">
+              <button
+                v-if="word.mastery_level < 5 && !word.section_name?.includes('Öğrenilen')"
+                class="action-btn learn-btn"
+                title="Öğrenildi Olarak İşaretle (Öğrenilenler Defterine Taşı)"
+                @click="markLearned(word)"
+              >
+                🎓 Öğrenildi
+              </button>
               <button class="action-btn edit-btn" title="Düzenle" @click="openEdit(word)">✏️</button>
               <button class="action-btn delete-btn" title="Sil" @click="removeWord(word.id)">🗑️</button>
             </div>
@@ -331,6 +346,14 @@ async function handleJsonImport() {
                 </span>
               </td>
               <td class="actions-cell">
+                <button
+                  v-if="word.mastery_level < 5 && !word.section_name?.includes('Öğrenilen')"
+                  class="action-btn learn-btn"
+                  title="Öğrenildi"
+                  @click="markLearned(word)"
+                >
+                  🎓 Öğrenildi
+                </button>
                 <button class="action-btn edit-btn" @click="openEdit(word)">✏️</button>
                 <button class="action-btn delete-btn" @click="removeWord(word.id)">🗑️</button>
               </td>
@@ -702,6 +725,21 @@ async function handleJsonImport() {
 
 .action-btn:hover {
   background: rgba(255, 255, 255, 0.12);
+}
+
+.learn-btn {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.learn-btn:hover {
+  background: rgba(16, 185, 129, 0.28);
+  transform: translateY(-1px);
 }
 
 /* Table styles */

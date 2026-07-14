@@ -216,19 +216,32 @@ router.post('/answer', async (req, res) => {
     if (!word) return res.status(404).json({ error: 'Kelime bulunamadı' })
 
     let newLevel = word.mastery_level
+    let newCorrect = word.correct_count || 0
     if (correct) {
       newLevel = Math.min(newLevel + 1, 5)
+      newCorrect += 1
       await db.query('UPDATE words SET correct_count = correct_count + 1 WHERE id = $1', [wordId])
     } else {
       newLevel = Math.max(newLevel - 1, 0)
       await db.query('UPDATE words SET wrong_count = wrong_count + 1 WHERE id = $1', [wordId])
     }
 
-    await db.query('UPDATE words SET mastery_level = $1, last_quizzed = $2 WHERE id = $3', [
-      newLevel,
-      new Date().toISOString(),
-      wordId
-    ])
+    if (newCorrect >= 5 || newLevel >= 5) {
+      const { getOrCreateLearnedSection } = await import('./words.js')
+      const learnedSecId = await getOrCreateLearnedSection(req.userId)
+      await db.query('UPDATE words SET mastery_level = 5, section_id = $1, last_quizzed = $2 WHERE id = $3', [
+        learnedSecId,
+        new Date().toISOString(),
+        wordId
+      ])
+      newLevel = 5
+    } else {
+      await db.query('UPDATE words SET mastery_level = $1, last_quizzed = $2 WHERE id = $3', [
+        newLevel,
+        new Date().toISOString(),
+        wordId
+      ])
+    }
 
     const gamification = await updateUserGamification(req.userId, correct ? earnedXp : 2)
     res.json({ masteryLevel: newLevel, gamification })

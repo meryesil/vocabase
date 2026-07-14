@@ -39,15 +39,26 @@ const sectionId = computed(() => Number(route.params.id))
 const section = computed(() => vocab.sections.find((s) => s.id === sectionId.value))
 
 const filteredWords = computed(() => {
-  if (!search.value.trim()) return vocab.words
-  const q = search.value.toLowerCase()
-  return vocab.words.filter(
-    (w) =>
-      w.english.toLowerCase().includes(q) ||
-      w.turkish.toLowerCase().includes(q) ||
-      (w.synonyms && w.synonyms.toLowerCase().includes(q))
-  )
+  let list = vocab.words || []
+  if (search.value.trim()) {
+    const q = search.value.toLowerCase()
+    list = list.filter(
+      (w) =>
+        w.english.toLowerCase().includes(q) ||
+        w.turkish.toLowerCase().includes(q) ||
+        (w.synonyms && w.synonyms.toLowerCase().includes(q))
+    )
+  }
+  return list.slice().sort((a, b) => {
+    return (b.is_favorite || 0) - (a.is_favorite || 0) || new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  })
 })
+
+async function markLearned(word) {
+  if (!confirm(`"${word.english}" kelimesini Öğrenildi olarak işaretleyip Öğrenilenler defterine taşımak istiyor musunuz?`)) return
+  await vocab.markAsLearned(word.id)
+  await vocab.fetchWords(sectionId.value)
+}
 
 const masteryLabels = ['Yeni', 'Başlangıç', 'Gelişiyor', 'İyi', 'Çok İyi', 'Uzman']
 
@@ -163,6 +174,14 @@ async function removeWord(id) {
             <span class="mastery-badge" :data-level="word.mastery_level">
               {{ masteryLabels[word.mastery_level] || 'Yeni' }}
             </span>
+            <button
+              v-if="word.mastery_level < 5 && !section?.name?.includes('Öğrenilen')"
+              class="action-btn learn-btn"
+              title="Öğrenildi Olarak İşaretle"
+              @click="markLearned(word)"
+            >
+              🎓 Öğrenildi
+            </button>
             <button class="delete-btn" title="Sil" @click="removeWord(word.id)">✕</button>
           </div>
         </div>
@@ -536,5 +555,21 @@ textarea.form-input {
   gap: 0.75rem;
   justify-content: flex-end;
   margin-top: 0.5rem;
+}
+
+.learn-btn {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.learn-btn:hover {
+  background: rgba(16, 185, 129, 0.28);
+  transform: translateY(-1px);
 }
 </style>

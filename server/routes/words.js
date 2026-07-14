@@ -17,7 +17,7 @@ router.get('/all', async (req, res) => {
        FROM words w
        JOIN sections s ON s.id = w.section_id
        WHERE w.user_id = $1
-       ORDER BY w.created_at DESC`,
+       ORDER BY w.is_favorite DESC, w.created_at DESC`,
       [req.userId]
     )
     res.json({ words })
@@ -32,7 +32,7 @@ router.get('/section/:sectionId', async (req, res) => {
       return res.status(404).json({ error: 'Bölüm bulunamadı' })
     }
 
-    const { rows: words } = await db.query('SELECT * FROM words WHERE section_id = $1 ORDER BY created_at DESC', [req.params.sectionId])
+    const { rows: words } = await db.query('SELECT * FROM words WHERE section_id = $1 ORDER BY is_favorite DESC, created_at DESC', [req.params.sectionId])
     res.json({ words })
   } catch (err) {
     res.status(500).json({ error: 'Kelimeler alınamadı' })
@@ -174,6 +174,38 @@ router.delete('/:id', async (req, res) => {
     res.json({ ok: true })
   } catch (err) {
     res.status(500).json({ error: 'Kelime silinemedi' })
+  }
+})
+
+export async function getOrCreateLearnedSection(userId) {
+  const { rows: check } = await db.query(
+    `SELECT id FROM sections WHERE user_id = $1 AND (name = $2 OR name = $3) LIMIT 1`,
+    [userId, '🎓 Öğrenilen Kelimeler', '🎓 Öğrenilenler']
+  )
+  if (check.length > 0) return check[0].id
+
+  const { rows: ins } = await db.query(
+    `INSERT INTO sections (user_id, name, description, icon, color)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [userId, '🎓 Öğrenilen Kelimeler', 'Tamamen öğrenilen ve ustalığa ulaşılan kelimelerin arşivi.', '🎓', '#10b981']
+  )
+  return ins[0].id
+}
+
+router.post('/:id/learn', async (req, res) => {
+  try {
+    const { rows: wRows } = await db.query('SELECT * FROM words WHERE id = $1 AND user_id = $2', [req.params.id, req.userId])
+    const word = wRows[0]
+    if (!word) return res.status(404).json({ error: 'Kelime bulunamadı' })
+
+    const learnedSecId = await getOrCreateLearnedSection(req.userId)
+    const { rows: updated } = await db.query(
+      `UPDATE words SET section_id = $1, mastery_level = 5, correct_count = GREATEST(correct_count, 5), last_quizzed = $2 WHERE id = $3 RETURNING *`,
+      [learnedSecId, new Date().toISOString(), word.id]
+    )
+    res.json({ success: true, word: updated[0], learnedSectionId: learnedSecId })
+  } catch (err) {
+    res.status(500).json({ error: 'Öğrenildi olarak işaretlenemedi' })
   }
 })
 
