@@ -49,4 +49,4 @@ services:
 
 networks:
   webnetwork:
-    driver: bridge
+    external: true
