@@ -22,6 +22,9 @@ const newWord = ref({
 
 const wordTypes = [
   'Genel',
+  'Edat (Preposition)',
+  'Edat (Zaman / Yer / Yön)',
+  'Bağlaç (Conjunction)',
   'Bağlaç (Zıtlık)',
   'Bağlaç (Neden-Sonuç)',
   'Bağlaç (Ekleme)',
@@ -54,31 +57,113 @@ const filteredWords = computed(() => {
   })
 })
 
+const movingWord = ref(null)
+const targetMoveSectionId = ref('')
+
+function openMoveModal(word) {
+  movingWord.value = word
+  const available = vocab.sections.filter(s => Number(s.id) !== Number(word.section_id) && !s.name.includes('Öğrenilen'))
+  targetMoveSectionId.value = available.length > 0 ? available[0].id : (vocab.sections.find(s => Number(s.id) !== Number(word.section_id))?.id || '')
+}
+
+async function executeMove() {
+  if (!movingWord.value || !targetMoveSectionId.value) return
+  try {
+    await vocab.moveWord(movingWord.value.id, targetMoveSectionId.value)
+    await vocab.fetchWords(sectionId.value)
+    movingWord.value = null
+  } catch (err) {
+    alert(err.message || 'Taşınırken bir hata oluştu')
+  }
+}
+
 async function markLearned(word) {
   if (!confirm(`"${word.english}" kelimesini Öğrenildi olarak işaretleyip Öğrenilenler defterine taşımak istiyor musunuz?`)) return
   await vocab.markAsLearned(word.id)
   await vocab.fetchWords(sectionId.value)
 }
 
-const masteryLabels = ['Yeni', 'Başlangıç', 'Gelişiyor', 'İyi', 'Çok İyi', 'Uzman']
+async function unlearnWord(word) {
+  if (!confirm(`"${word.english}" kelimesini Öğrenilenler defterinden çıkarıp tekrar aktif çalışmaya almak istiyor musunuz?`)) return
+  try {
+    await vocab.markAsUnlearned(word.id, sectionId.value)
+    await vocab.fetchWords(sectionId.value)
+  } catch (err) {
+    alert(err.message || 'İşlem başarısız')
+  }
+}
+
+function formatMasteryBadge(word) {
+  if (!word) return ''
+  if (word.mastery_level >= 5 || section.value?.name?.includes('Öğrenilen')) {
+    return '🎓 Öğrenildi'
+  }
+  if (word.mastery_level === 0) {
+    return '✨ Yeni'
+  }
+  return `⚡ Quiz: ${word.mastery_level}/5`
+}
 
 onMounted(async () => {
-  await vocab.fetchSections()
-  await vocab.fetchWords(sectionId.value)
+  await Promise.all([
+    vocab.fetchSections(),
+    vocab.fetchWords(sectionId.value),
+    vocab.fetchAllWords()
+  ])
 })
+
+function normalizeTokens(str) {
+  if (!str || typeof str !== 'string') return []
+  return str
+    .split(/[\/;,|\n\t]|(?:\s+or\s+)|(?:\s+veya\s+)|(?:\s+-\s+)/i)
+    .map(s => s.trim().toLowerCase())
+    .filter(s => s.length > 0)
+}
+
+function checkFrontendDuplicate(allWords, newEng) {
+  const newTokens = normalizeTokens(newEng)
+  if (!allWords || allWords.length === 0 || newTokens.length === 0) return null
+
+  for (const w of allWords) {
+    if (w.english.trim().toLowerCase() === newEng.trim().toLowerCase()) {
+      return { matchedToken: newEng.trim(), existingEnglish: w.english, sectionName: w.section_name }
+    }
+    const existingTokens = normalizeTokens(w.english)
+    for (const t of newTokens) {
+      if (existingTokens.includes(t)) {
+        return { matchedToken: t, existingEnglish: w.english, sectionName: w.section_name }
+      }
+    }
+  }
+  return null
+}
 
 async function addWord() {
   if (!newWord.value.english.trim() || !newWord.value.turkish.trim()) return
-  await vocab.addWord({ sectionId: sectionId.value, ...newWord.value })
-  showAddWord.value = false
-  newWord.value = {
-    english: '',
-    turkish: '',
-    example: '',
-    notes: '',
-    wordType: 'Genel',
-    synonyms: '',
-    difficulty: 2
+  try {
+    if (vocab.allWords && vocab.allWords.length > 0) {
+      const dup = checkFrontendDuplicate(vocab.allWords, newWord.value.english)
+      if (dup && dup.sectionName) {
+        const msg = dup.existingEnglish.toLowerCase() !== newWord.value.english.trim().toLowerCase()
+          ? `⚠️ "${newWord.value.english.trim()}" kelimesi (veya içindeki "${dup.matchedToken}" ifadesi), zaten "${dup.sectionName}" defterinizde "${dup.existingEnglish}" olarak kayıtlı! Eklenmedi.`
+          : `⚠️ "${newWord.value.english.trim()}" kelimesi zaten "${dup.sectionName}" defterinizin içinde kayıtlı! Eklenmedi.`
+        alert(msg)
+        return
+      }
+    }
+    await vocab.addWord({ sectionId: sectionId.value, ...newWord.value })
+    showAddWord.value = false
+    newWord.value = {
+      english: '',
+      turkish: '',
+      example: '',
+      notes: '',
+      wordType: 'Genel',
+      synonyms: '',
+      difficulty: 2
+    }
+  } catch (err) {
+    alert(err.message || 'Kelime eklenemedi')
   }
 }
 
@@ -172,17 +257,22 @@ async function removeWord(id) {
 
           <div class="word-meta">
             <span class="mastery-badge" :data-level="word.mastery_level">
-              {{ masteryLabels[word.mastery_level] || 'Yeni' }}
+              {{ formatMasteryBadge(word) }}
             </span>
-            <button
-              v-if="word.mastery_level < 5 && !section?.name?.includes('Öğrenilen')"
-              class="action-btn learn-btn"
-              title="Öğrenildi Olarak İşaretle"
-              @click="markLearned(word)"
-            >
-              🎓 Öğrenildi
-            </button>
-            <button class="delete-btn" title="Sil" @click="removeWord(word.id)">✕</button>
+            <div class="mini-actions-row">
+              <button
+                v-if="word.mastery_level < 5 && !section?.name?.includes('Öğrenilen')"
+                class="mini-btn learn-pill"
+                title="Öğrenildi Olarak İşaretle (Öğrenilenler Defterine Gönder)"
+                @click="markLearned(word)"
+              >
+                ✓ Öğrenildi
+              </button>
+              <button class="mini-btn move-pill" title="İstediğin Deftere Taşı" @click="openMoveModal(word)">
+                ↗ Taşı
+              </button>
+              <button class="mini-btn del-pill" title="Sil" @click="removeWord(word.id)">✕</button>
+            </div>
           </div>
         </div>
       </div>
@@ -266,6 +356,30 @@ async function removeWord(id) {
               <button type="submit" class="btn btn-primary">Kaydet</button>
             </div>
           </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Move Word Modal -->
+    <Teleport to="body">
+      <div v-if="movingWord" class="modal-overlay" @click.self="movingWord = null">
+        <div class="modal glass-card">
+          <h2>📦 Kelimeyi Başka Deftere Taşı</h2>
+          <p class="modal-desc">"<strong>{{ movingWord.english }}</strong>" kelimesini nereye taşımak istersiniz?</p>
+          
+          <div class="form-group" style="margin-top: 1.2rem;">
+            <label>Hedef Defter / Bölüm</label>
+            <select v-model="targetMoveSectionId" class="form-input">
+              <option v-for="sec in vocab.sections.filter(s => Number(s.id) !== Number(movingWord?.section_id))" :key="sec.id" :value="sec.id">
+                {{ sec.icon || '📚' }} {{ sec.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 1.5rem;">
+            <button type="button" class="btn btn-ghost" @click="movingWord = null">İptal</button>
+            <button type="button" class="btn btn-primary" @click="executeMove">Taşı</button>
+          </div>
         </div>
       </div>
     </Teleport>
@@ -441,14 +555,14 @@ async function removeWord(id) {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.65rem;
+  gap: 0.45rem;
   flex-shrink: 0;
 }
 
 .mastery-badge {
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.25rem 0.625rem;
+  padding: 0.22rem 0.6rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-muted);
@@ -467,22 +581,59 @@ async function removeWord(id) {
   color: var(--warning);
 }
 
-.delete-btn {
-  background: none;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-  padding: 0.25rem;
-  border-radius: 6px;
-  opacity: 0;
-  transition: all 0.2s;
+.mini-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.word-card:hover .delete-btn {
-  opacity: 1;
+.mini-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
 }
 
-.delete-btn:hover {
-  color: var(--error);
+.mini-btn:hover {
+  transform: translateY(-1px);
+}
+
+.learn-pill {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.25);
+}
+.learn-pill:hover {
+  background: rgba(52, 211, 153, 0.22);
+}
+
+.move-pill {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.25);
+}
+.move-pill:hover {
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.del-pill {
+  color: #94a3b8;
+  background: transparent;
+  border-color: transparent;
+  padding: 0.18rem 0.4rem;
+}
+.del-pill:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
 }
 
 .empty-state {
@@ -555,22 +706,6 @@ textarea.form-input {
   gap: 0.75rem;
   justify-content: flex-end;
   margin-top: 0.5rem;
-}
-
-.learn-btn {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  transition: all 0.2s;
-}
-
-.learn-btn:hover {
-  background: rgba(16, 185, 129, 0.28);
-  transform: translateY(-1px);
 }
 
 [data-theme="light"] .section-header h1,

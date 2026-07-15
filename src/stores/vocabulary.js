@@ -133,6 +133,31 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     return res
   }
 
+  async function markAsUnlearned(id, targetSectionId) {
+    const res = await api(`/words/${id}/unlearn`, {
+      method: 'POST',
+      body: JSON.stringify({ targetSectionId })
+    })
+    await fetchSections()
+    await fetchAllWords()
+    await fetchStats()
+    return res
+  }
+
+  async function moveWord(id, targetSectionId) {
+    const res = await api(`/words/${id}/move`, {
+      method: 'PATCH',
+      body: JSON.stringify({ targetSectionId })
+    })
+    const idx = words.value.findIndex((w) => w.id === id)
+    if (idx !== -1) {
+      words.value.splice(idx, 1)
+    }
+    await fetchSections()
+    await fetchAllWords()
+    return res
+  }
+
   async function fetchStats() {
     const data = await api('/quiz/stats')
     stats.value = data.stats
@@ -158,6 +183,8 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     batchImport,
     deleteWord,
     markAsLearned,
+    markAsUnlearned,
+    moveWord,
     fetchStats,
   }
 })

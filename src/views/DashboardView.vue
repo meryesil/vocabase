@@ -1,16 +1,19 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { useVocabularyStore } from '@/stores/vocabulary.js'
+import { getRanksList, getRankByXp } from '@/utils/ranks.js'
 import AppNavbar from '@/components/AppNavbar.vue'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const vocab = useVocabularyStore()
 
 const showModal = ref(false)
 const showStarterModal = ref(false)
+const showRanksModal = ref(false)
 const importingPackId = ref(null)
 const newSection = ref({ name: '', description: '', icon: '📚', color: '#6366f1' })
 
@@ -26,7 +29,22 @@ const examLabels = {
   other: 'Genel Akademik'
 }
 
+const userExamGoal = computed(() => auth.user?.exam_goal || auth.user?.examGoal || 'other')
+const userRankInfo = computed(() => getRankByXp(vocab.stats?.xp || 0, userExamGoal.value))
+const currentRanksList = computed(() => getRanksList(userExamGoal.value))
+
+async function changeExamGoal(newGoal) {
+  try {
+    await auth.updateProfile({ examGoal: newGoal })
+  } catch (e) {
+    alert(e.message || 'Hedef güncellenemedi')
+  }
+}
+
 onMounted(async () => {
+  if (route.query.ranks === '1') {
+    showRanksModal.value = true
+  }
   await Promise.all([
     vocab.fetchSections(),
     vocab.fetchStats(),
@@ -81,6 +99,7 @@ async function removeSection(id) {
         <div class="header-actions">
           <button class="btn btn-primary btn-glow" @click="router.push('/quiz')">⚡ Akıllı Quiz & Oyunlar</button>
           <button class="btn btn-ghost" @click="router.push('/words')">📖 Tüm Defterim</button>
+          <button class="btn btn-ghost" @click="showRanksModal = true">🏆 Ünvan & XP</button>
           <button class="btn btn-ghost" @click="showModal = true">+ Yeni Bölüm</button>
         </div>
       </header>
@@ -94,14 +113,14 @@ async function removeSection(id) {
             <span class="strip-lbl">Çalışma Serisi</span>
           </div>
         </div>
-        <div class="strip-item">
+        <div class="strip-item clickable-strip" @click="showRanksModal = true" title="Ünvan basamaklarını ve XP tablosunu görmek için tıklayın">
           <span class="strip-icon xp-glow">⚡</span>
           <div class="strip-text">
             <span class="strip-val">{{ vocab.stats.xp || 0 }} XP</span>
-            <span class="strip-lbl">Akademik Puan</span>
+            <span class="strip-lbl">Akademik Puan 🏆</span>
           </div>
         </div>
-        <div class="strip-item">
+        <div class="strip-item clickable-strip" @click="router.push('/words?learned=1')" title="Öğrenilen kelimelerinizi görmek için tıklayın">
           <span class="strip-icon">🎯</span>
           <div class="strip-text">
             <span class="strip-val">{{ vocab.stats.learned || 0 }} / {{ vocab.stats.totalWords || 0 }}</span>
@@ -120,9 +139,9 @@ async function removeSection(id) {
       <!-- Quick Actions Banner for Starter Packs -->
       <div class="starter-banner glass-card">
         <div class="banner-info">
-          <h3>📦 Hazır YÖKDİL & YDS Akademik Kelime Paketleri</h3>
+          <h3>📦 Hazır {{ examLabels[userExamGoal] || 'Akademik' }} Kelime & Bağlaç Paketleri</h3>
           <p>
-            Daha hızlı başlamak ister misin? En sık çıkan <strong>Akademik Bağlaçlar</strong>, <strong>Temel Fiiller</strong> ve alan kelimelerini tek tıkla defterine aktar!
+            Daha hızlı başlamak ister misin? Hedefine özel en sık çıkan <strong>Bağlaçlar</strong>, <strong>Temel Fiiller</strong> ve alan kelimelerini tek tıkla defterine aktar!
           </p>
         </div>
         <button class="btn btn-primary banner-btn" @click="showStarterModal = true">
@@ -244,9 +263,9 @@ async function removeSection(id) {
     <Teleport to="body">
       <div v-if="showStarterModal" class="modal-overlay" @click.self="showStarterModal = false">
         <div class="modal starter-modal glass-card">
-          <h2>📦 Hazır Akademik Kelime & Bağlaç Paketleri</h2>
+          <h2>📦 Hazır {{ examLabels[userExamGoal] || 'Akademik' }} Kelime & Bağlaç Paketleri</h2>
           <p class="modal-sub">
-            Aşağıdaki uzman onaylı YÖKDİL/YDS kelime paketlerinden istediğinizi tek tıkla kendi defterinize ayrı bir bölüm olarak ekleyebilirsiniz.
+            Aşağıdaki uzman onaylı hazır kelime paketlerinden istediğinizi tek tıkla kendi defterinize ayrı bir bölüm olarak ekleyebilirsiniz.
           </p>
 
           <div class="packs-list">
@@ -275,6 +294,94 @@ async function removeSection(id) {
 
           <div class="modal-actions">
             <button type="button" class="btn btn-ghost" @click="showStarterModal = false">Kapat</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Ranks and XP Progression Modal -->
+    <Teleport to="body">
+      <div v-if="showRanksModal" class="modal-overlay" @click.self="showRanksModal = false">
+        <div class="modal ranks-modal glass-card">
+          <div class="modal-header-flex">
+            <div>
+              <h2 class="modal-title">🏆 {{ examLabels[userExamGoal] || 'Akademik' }} Ünvan Basamakları & XP Yolu</h2>
+              <p class="modal-desc">Seçtiğiniz hedefe uygun kelimelerde uzmanlaştıkça yeni ünvanların kilidini açın.</p>
+            </div>
+            <button class="close-icon-btn" @click="showRanksModal = false">✕</button>
+          </div>
+
+          <!-- Goal Switcher inside modal -->
+          <div class="goal-switcher">
+            <span>🎯 Aktif Hedefin: <strong>{{ examLabels[userExamGoal] || 'Genel Akademik' }}</strong> <small>(Değiştirmek için tıkla)</small></span>
+            <div class="goal-chips">
+              <button
+                v-for="(label, key) in examLabels"
+                :key="key"
+                class="goal-chip"
+                :class="{ active: userExamGoal === key }"
+                @click="changeExamGoal(key)"
+              >
+                {{ label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Current Rank & Progress Card -->
+          <div class="current-rank-card" :style="{ borderColor: userRankInfo.current.border, background: userRankInfo.current.bg }">
+            <div class="rank-current-left">
+              <span class="rank-badge-lg" :style="{ color: userRankInfo.current.color, borderColor: userRankInfo.current.border }">
+                {{ userRankInfo.current.title }}
+              </span>
+              <p class="rank-current-desc">{{ userRankInfo.current.desc }}</p>
+            </div>
+            <div class="rank-current-right">
+              <div class="xp-stat-num">{{ vocab.stats?.xp || 0 }} <span>XP</span></div>
+              <div v-if="userRankInfo.next" class="xp-next-info">
+                Sonraki Ünvan: <strong>{{ userRankInfo.next.title }}</strong> ({{ userRankInfo.xpNeeded }} XP kaldı)
+              </div>
+              <div v-else class="xp-next-info">
+                👑 Zirve Ünvana Ulaştınız!
+              </div>
+              <div v-if="userRankInfo.next" class="progress-bar-wrap">
+                <div class="progress-bar-inner" :style="{ width: userRankInfo.progressPercent + '%' }"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ranks Ladder -->
+          <div class="ranks-ladder">
+            <div
+              v-for="rank in currentRanksList"
+              :key="rank.title"
+              class="rank-ladder-item"
+              :class="{ 'rank-achieved': (vocab.stats?.xp || 0) >= rank.xp, 'rank-active-now': userRankInfo.current.title === rank.title }"
+            >
+              <div class="rank-item-left">
+                <span class="rank-status-icon">
+                  {{ (vocab.stats?.xp || 0) >= rank.xp ? '✅' : '🔒' }}
+                </span>
+                <div>
+                  <div class="rank-item-title" :style="{ color: rank.color }">{{ rank.title }}</div>
+                  <div class="rank-item-desc">{{ rank.desc }}</div>
+                </div>
+              </div>
+              <div class="rank-item-xp">{{ rank.xp }} XP</div>
+            </div>
+          </div>
+
+          <!-- How to Earn XP Tips -->
+          <div class="xp-tips-box">
+            <h4>💡 Nasıl XP Kazanılır?</h4>
+            <ul>
+              <li>⚡ <strong>Akıllı Quiz & Oyunlar:</strong> Tamamlanan her seans için +25 ile +50 XP</li>
+              <li>📖 <strong>Doğru Kelime Cevapları:</strong> Quizde bildiğiniz her doğru kelime için +5 XP</li>
+              <li>🔥 <strong>Günlük Seri (Streak):</strong> Çalışma serinizi koruduğunuz her gün ekstra bonus XP</li>
+            </ul>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-primary" @click="showRanksModal = false">Anladım, Çalışmaya Devam 🚀</button>
           </div>
         </div>
       </div>
@@ -744,5 +851,220 @@ async function removeSection(id) {
   background: #ffffff !important;
   border-color: #cbd5e1 !important;
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08) !important;
+}
+
+.clickable-strip {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.clickable-strip:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.22);
+}
+
+.ranks-modal {
+  max-width: 680px !important;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.goal-switcher {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  padding: 0.9rem 1.1rem;
+  border-radius: 12px;
+  margin-bottom: 1.25rem;
+  font-size: 0.88rem;
+}
+
+.goal-switcher small {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin-left: 0.35rem;
+}
+
+.goal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.goal-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.goal-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.goal-chip.active {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: #8b5cf6;
+  color: #c084fc;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.25);
+}
+
+.current-rank-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  border: 1px solid;
+  margin-bottom: 1.5rem;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.rank-current-left {
+  flex: 1;
+  min-width: 220px;
+}
+
+.rank-badge-lg {
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid;
+  display: inline-block;
+  margin-bottom: 0.6rem;
+}
+
+.rank-current-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.rank-current-right {
+  min-width: 200px;
+  text-align: right;
+}
+
+.xp-stat-num {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #fbbf24;
+}
+
+.xp-stat-num span {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.xp-next-info {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0.35rem 0 0.55rem;
+}
+
+.progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
+  transition: width 0.5s ease;
+}
+
+.ranks-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.rank-ladder-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.15rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+
+.rank-ladder-item.rank-achieved {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.rank-ladder-item.rank-active-now {
+  border: 2px solid #8b5cf6 !important;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
+  background: rgba(139, 92, 246, 0.12) !important;
+}
+
+.rank-item-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.rank-status-icon {
+  font-size: 1.25rem;
+}
+
+.rank-item-title {
+  font-weight: 700;
+  font-size: 0.98rem;
+  margin-bottom: 0.15rem;
+}
+
+.rank-item-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.rank-item-xp {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.xp-tips-box {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.xp-tips-box h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #38bdf8;
+  margin-bottom: 0.6rem;
+}
+
+.xp-tips-box ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.7;
 }
 </style>

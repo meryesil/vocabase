@@ -49,7 +49,7 @@ export async function api(endpoint, options = {}) {
           'Sunucuda geçici bir problem oluştu (Hata kodu: ' + res.status + '). Lütfen birkaç dakika sonra tekrar deneyin.'
       )
     }
-    throw new Error(data.error || 'İşlem gerçekleştirilemedi. Lütfen bilgilerinizi kontrol edin.')
+    throw new Error(data.error || `İşlem gerçekleştirilemedi (Hata kodu: ${res.status}). Lütfen tekrar deneyin.`)
   }
 
   return data

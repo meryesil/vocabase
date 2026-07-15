@@ -1,10 +1,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useVocabularyStore } from '@/stores/vocabulary.js'
 import AppNavbar from '@/components/AppNavbar.vue'
 
 const router = useRouter()
+const route = useRoute()
 const vocab = useVocabularyStore()
 
 const search = ref('')
@@ -12,6 +13,7 @@ const selectedSection = ref('')
 const selectedType = ref('')
 const selectedDifficulty = ref('')
 const onlyFavorites = ref(false)
+const onlyLearned = ref(route.query.learned === '1')
 const viewMode = ref('cards') // 'cards' or 'table'
 
 // Edit modal state
@@ -26,6 +28,9 @@ const importStatus = ref('')
 
 const wordTypes = [
   'Genel',
+  'Edat (Preposition)',
+  'Edat (Zaman / Yer / Yön)',
+  'Bağlaç (Conjunction)',
   'Bağlaç (Zıtlık)',
   'Bağlaç (Neden-Sonuç)',
   'Bağlaç (Ekleme)',
@@ -75,14 +80,48 @@ const filteredWords = computed(() => {
     list = list.filter((w) => w.is_favorite === 1)
   }
 
+  if (onlyLearned.value) {
+    list = list.filter((w) => w.mastery_level >= 5 || (w.section_name && w.section_name.includes('Öğrenilen')))
+  }
+
   return list.slice().sort((a, b) => {
     return (b.is_favorite || 0) - (a.is_favorite || 0) || new Date(b.created_at || 0) - new Date(a.created_at || 0)
   })
 })
 
+const movingWord = ref(null)
+const targetMoveSectionId = ref('')
+
+function openMoveModal(word) {
+  movingWord.value = word
+  const available = vocab.sections.filter(s => Number(s.id) !== Number(word.section_id) && !s.name.includes('Öğrenilen'))
+  targetMoveSectionId.value = available.length > 0 ? available[0].id : (vocab.sections.find(s => Number(s.id) !== Number(word.section_id))?.id || '')
+}
+
+async function executeMove() {
+  if (!movingWord.value || !targetMoveSectionId.value) return
+  try {
+    await vocab.moveWord(movingWord.value.id, targetMoveSectionId.value)
+    await vocab.fetchAllWords()
+    movingWord.value = null
+  } catch (err) {
+    alert(err.message || 'Taşınırken bir hata oluştu')
+  }
+}
+
 async function markLearned(word) {
   if (!confirm(`"${word.english}" kelimesini Öğrenildi olarak işaretleyip Öğrenilenler defterine taşımak istiyor musunuz?`)) return
   await vocab.markAsLearned(word.id)
+}
+
+async function unlearnWord(word) {
+  if (!confirm(`"${word.english}" kelimesini Öğrenilenler defterinden çıkarıp tekrar aktif çalışmaya almak istiyor musunuz?`)) return
+  try {
+    await vocab.markAsUnlearned(word.id)
+    await vocab.fetchAllWords()
+  } catch (err) {
+    alert(err.message || 'İşlem başarısız')
+  }
 }
 
 async function toggleFav(word) {
@@ -230,6 +269,14 @@ async function handleJsonImport() {
             ⭐ Sadece Yıldızlılar
           </button>
 
+          <button
+            class="btn fav-toggle-btn learned-toggle-btn"
+            :class="{ active: onlyLearned }"
+            @click="onlyLearned = !onlyLearned"
+          >
+            🏆 Sadece Öğrenilenler
+          </button>
+
           <div class="view-toggle">
             <button
               class="toggle-item"
@@ -297,17 +344,20 @@ async function handleJsonImport() {
             <div class="diff-level" :title="`Zorluk: ${word.difficulty || 2}/3`">
               <span v-for="n in 3" :key="n" class="dot" :class="{ filled: n <= (word.difficulty || 2) }"></span>
             </div>
-            <div class="card-actions">
+            <div class="mini-actions-row">
               <button
                 v-if="word.mastery_level < 5 && !word.section_name?.includes('Öğrenilen')"
-                class="action-btn learn-btn"
-                title="Öğrenildi Olarak İşaretle (Öğrenilenler Defterine Taşı)"
+                class="mini-btn learn-pill"
+                title="Öğrenildi Olarak İşaretle (Öğrenilenler Defterine Gönder)"
                 @click="markLearned(word)"
               >
-                🎓 Öğrenildi
+                ✓ Öğrenildi
               </button>
-              <button class="action-btn edit-btn" title="Düzenle" @click="openEdit(word)">✏️</button>
-              <button class="action-btn delete-btn" title="Sil" @click="removeWord(word.id)">🗑️</button>
+              <button class="mini-btn move-pill" title="İstediğin Deftere Taşı" @click="openMoveModal(word)">
+                ↗ Taşı
+              </button>
+              <button class="mini-btn edit-pill" title="Düzenle" @click="openEdit(word)">✏️</button>
+              <button class="mini-btn del-pill" title="Sil" @click="removeWord(word.id)">✕</button>
             </div>
           </div>
         </div>
@@ -348,14 +398,15 @@ async function handleJsonImport() {
               <td class="actions-cell">
                 <button
                   v-if="word.mastery_level < 5 && !word.section_name?.includes('Öğrenilen')"
-                  class="action-btn learn-btn"
+                  class="mini-btn learn-pill"
                   title="Öğrenildi"
                   @click="markLearned(word)"
                 >
-                  🎓 Öğrenildi
+                  ✓ Öğrenildi
                 </button>
-                <button class="action-btn edit-btn" @click="openEdit(word)">✏️</button>
-                <button class="action-btn delete-btn" @click="removeWord(word.id)">🗑️</button>
+                <button class="mini-btn move-pill" title="Taşı" @click="openMoveModal(word)">↗ Taşı</button>
+                <button class="mini-btn edit-pill" title="Düzenle" @click="openEdit(word)">✏️</button>
+                <button class="mini-btn del-pill" title="Sil" @click="removeWord(word.id)">✕</button>
               </td>
             </tr>
           </tbody>
@@ -458,6 +509,30 @@ async function handleJsonImport() {
             <button type="button" class="btn btn-primary" :disabled="!importJsonText" @click="handleJsonImport">
               Toplu Ekle
             </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Move Word Modal -->
+    <Teleport to="body">
+      <div v-if="movingWord" class="modal-overlay" @click.self="movingWord = null">
+        <div class="modal glass-card">
+          <h2>📦 Kelimeyi Başka Deftere Taşı</h2>
+          <p class="modal-desc">"<strong>{{ movingWord.english }}</strong>" kelimesini nereye taşımak istersiniz?</p>
+          
+          <div class="form-group" style="margin-top: 1.2rem;">
+            <label>Hedef Defter / Bölüm</label>
+            <select v-model="targetMoveSectionId" class="form-input">
+              <option v-for="sec in vocab.sections.filter(s => Number(s.id) !== Number(movingWord?.section_id))" :key="sec.id" :value="sec.id">
+                {{ sec.icon || '📚' }} {{ sec.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 1.5rem;">
+            <button type="button" class="btn btn-ghost" @click="movingWord = null">İptal</button>
+            <button type="button" class="btn btn-primary" @click="executeMove">Taşı</button>
           </div>
         </div>
       </div>
@@ -715,31 +790,75 @@ async function handleJsonImport() {
   gap: 0.5rem;
 }
 
-.action-btn {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.35rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  transition: all 0.2s;
+.mini-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.learn-btn {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+.mini-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.72rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
-.learn-btn:hover {
-  background: rgba(16, 185, 129, 0.28);
+.mini-btn:hover {
   transform: translateY(-1px);
+}
+
+.learn-pill {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.25);
+}
+.learn-pill:hover {
+  background: rgba(52, 211, 153, 0.22);
+}
+
+.move-pill {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.25);
+}
+.move-pill:hover {
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.edit-pill {
+  color: #fbbf24;
+  background: transparent;
+  border-color: transparent;
+  padding: 0.18rem 0.4rem;
+}
+.edit-pill:hover {
+  background: rgba(251, 191, 36, 0.12);
+}
+
+.del-pill {
+  color: #94a3b8;
+  background: transparent;
+  border-color: transparent;
+  padding: 0.18rem 0.4rem;
+}
+.del-pill:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.learned-toggle-btn.active {
+  background: rgba(245, 158, 11, 0.22) !important;
+  color: #fbbf24 !important;
+  border-color: #fbbf24 !important;
 }
 
 /* Table styles */

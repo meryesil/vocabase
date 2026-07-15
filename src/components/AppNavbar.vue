@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { useVocabularyStore } from '@/stores/vocabulary.js'
+import { getRankByXp } from '@/utils/ranks.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -21,24 +22,10 @@ function setTheme(newTheme) {
   document.documentElement.setAttribute('data-theme', newTheme)
 }
 
-const examPrefix = computed(() => {
-  const goal = (auth.user?.exam_goal || '').toString().toLowerCase()
-  if (goal.includes('yds')) return 'YDS'
-  if (goal.includes('toefl')) return 'TOEFL'
-  if (goal.includes('ielts')) return 'IELTS'
-  if (goal.includes('kpss')) return 'KPSS'
-  if (goal.includes('other') || goal.includes('genel') || goal.includes('akademik')) return 'Akademik'
-  return 'YÖKDİL'
-})
-
+const userExamGoal = computed(() => auth.user?.exam_goal || auth.user?.examGoal || 'other')
 const academicRank = computed(() => {
   const xp = vocab.stats?.xp || 0
-  const p = examPrefix.value
-  if (xp >= 4000) return { title: `👑 ${p} Üstadı`, color: '#f59e0b', border: 'rgba(245, 158, 11, 0.4)', bg: 'rgba(245, 158, 11, 0.15)' }
-  if (xp >= 1500) return { title: '🎓 Doçent Adayı', color: '#ec4899', border: 'rgba(236, 72, 153, 0.4)', bg: 'rgba(236, 72, 153, 0.15)' }
-  if (xp >= 500) return { title: '🔬 Araştırmacı', color: '#3b82f6', border: 'rgba(59, 130, 246, 0.4)', bg: 'rgba(59, 130, 246, 0.15)' }
-  if (xp >= 100) return { title: '📖 Akademik Okur', color: '#10b981', border: 'rgba(16, 185, 129, 0.4)', bg: 'rgba(16, 185, 129, 0.15)' }
-  return { title: `🌱 ${p} Adayı`, color: '#c084fc', border: 'rgba(192, 132, 252, 0.4)', bg: 'rgba(192, 132, 252, 0.15)' }
+  return getRankByXp(xp, userExamGoal.value).current
 })
 
 onMounted(async () => {
@@ -87,9 +74,10 @@ function logout() {
             VocaBase
             <span
               v-if="vocab.stats"
-              class="logo-badge rank-badge-top"
+              class="logo-badge rank-badge-top clickable-badge"
               :style="{ color: academicRank.color, borderColor: academicRank.border, background: academicRank.bg }"
-              :title="'XP: ' + (vocab.stats?.xp || 0) + ' -> ' + academicRank.title"
+              :title="'XP: ' + (vocab.stats?.xp || 0) + ' -> ' + academicRank.title + ' (Ünvan basamaklarını ve XP tablosunu görmek için tıklayın)'"
+              @click.prevent="router.push('/dashboard?ranks=1')"
             >
               {{ academicRank.title }}
             </span>
@@ -104,10 +92,10 @@ function logout() {
 
         <div class="nav-user">
           <div v-if="vocab.stats" class="gamify-badges">
-            <span class="badge-item streak-badge" title="Günlük Seri">
+            <span class="badge-item streak-badge" title="Günlük Çalışma Serisi">
               🔥 <strong>{{ vocab.stats.streakDays || 0 }}</strong> Gün
             </span>
-            <span class="badge-item xp-badge" title="Toplam Puan">
+            <span class="badge-item xp-badge clickable-badge" title="Toplam Puan - Ünvan tablosunu görmek için tıklayın" @click="router.push('/dashboard?ranks=1')">
               ⚡ <strong>{{ vocab.stats.xp || 0 }}</strong> XP
             </span>
           </div>
@@ -225,6 +213,16 @@ function logout() {
   border: 1px solid;
   transition: all 0.3s;
   white-space: nowrap;
+}
+
+.clickable-badge {
+  cursor: pointer;
+  user-select: none;
+}
+
+.clickable-badge:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 12px rgba(129, 140, 248, 0.35);
 }
 
 .nav-links {
