@@ -12,6 +12,10 @@ const theme = ref(localStorage.getItem('theme') || 'dark')
 
 function toggleTheme() {
   const newTheme = theme.value === 'dark' ? 'light' : 'dark'
+  setTheme(newTheme)
+}
+
+function setTheme(newTheme) {
   theme.value = newTheme
   localStorage.setItem('theme', newTheme)
   document.documentElement.setAttribute('data-theme', newTheme)
@@ -95,18 +99,10 @@ function logout() {
         <div class="nav-links">
           <RouterLink to="/dashboard" class="nav-link">Ana Sayfa</RouterLink>
           <RouterLink to="/words" class="nav-link">Defterim</RouterLink>
-          <RouterLink to="/quiz" class="nav-link quiz-link">⚡ Akıllı Quiz & Oyunlar</RouterLink>
+          <RouterLink to="/quiz" class="nav-link quiz-link">⚡ Quiz & Oyun</RouterLink>
         </div>
 
         <div class="nav-user">
-          <button
-            class="btn btn-ghost btn-sm theme-toggle-btn"
-            @click="toggleTheme"
-            :title="theme === 'dark' ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'"
-          >
-            {{ theme === 'dark' ? '☀️' : '🌙' }}
-          </button>
-
           <div v-if="vocab.stats" class="gamify-badges">
             <span class="badge-item streak-badge" title="Günlük Seri">
               🔥 <strong>{{ vocab.stats.streakDays || 0 }}</strong> Gün
@@ -137,6 +133,26 @@ function logout() {
         <span class="mob-label">Quiz & Oyun</span>
       </RouterLink>
     </div>
+
+    <!-- Floating Theme Switcher Pill (Üst barı bozmaz, ekranın sağ alt/üst köşesinde sabit kalır) -->
+    <div class="floating-theme-switch" title="Temayı Değiştir">
+      <button
+        class="theme-opt"
+        :class="{ active: theme === 'light' }"
+        @click="setTheme('light')"
+        title="Açık Temayı Seç"
+      >
+        <span>☀️</span> Açık
+      </button>
+      <button
+        class="theme-opt"
+        :class="{ active: theme === 'dark' }"
+        @click="setTheme('dark')"
+        title="Koyu Temayı Seç"
+      >
+        <span>🌙</span> Koyu
+      </button>
+    </div>
   </div>
 </template>
 
@@ -161,18 +177,18 @@ function logout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 68px;
-  gap: 1rem;
+  height: 56px;
+  gap: 0.75rem;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
   color: var(--text-primary);
   text-decoration: none;
   font-weight: 800;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   transition: transform 0.2s;
   flex-shrink: 0;
 }
@@ -182,8 +198,8 @@ function logout() {
 }
 
 .custom-logo {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
 }
 
@@ -196,15 +212,15 @@ function logout() {
 .logo-text {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   font-family: 'Outfit', 'Inter', sans-serif;
   letter-spacing: -0.02em;
 }
 
 .rank-badge-top {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 0.2rem 0.6rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 999px;
   border: 1px solid;
   transition: all 0.3s;
@@ -214,27 +230,28 @@ function logout() {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .nav-link {
   color: var(--text-secondary);
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.9375rem;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .nav-link.router-link-active {
   color: var(--accent);
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(99, 102, 241, 0.12);
 }
 
 .quiz-link {
@@ -252,23 +269,23 @@ function logout() {
 .nav-user {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   flex-shrink: 0;
 }
 
 .gamify-badges {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .badge-item {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.65rem;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
 }
 
@@ -284,36 +301,64 @@ function logout() {
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
-/* Compact, Single-Icon Theme Switcher Button */
-.theme-toggle-btn {
-  font-size: 1.15rem;
-  width: 36px;
-  height: 36px;
-  padding: 0;
+/* Floating Theme Switcher Pill (Ekranın sağ alt/üst köşesinde sabit, barı bozmaz) */
+.floating-theme-switch {
+  position: fixed;
+  bottom: 84px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 5px;
   border-radius: 999px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-theme-switch:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(129, 140, 248, 0.3);
+  border-color: var(--accent);
+}
+
+.theme-opt {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.06);
-  flex-shrink: 0;
-  transition: all 0.2s ease;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
 
-.theme-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: scale(1.05);
+.theme-opt:hover {
+  color: var(--text-primary);
 }
 
-[data-theme="light"] .theme-toggle-btn {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+.theme-opt.active {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
 .user-name {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-secondary);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-bottom-nav {
@@ -412,6 +457,12 @@ function logout() {
   .logout-btn {
     padding: 0.3rem 0.6rem;
     font-size: 0.75rem;
+  }
+  .floating-theme-switch {
+    bottom: 76px;
+    right: 12px;
+    transform: scale(0.9);
+    transform-origin: bottom right;
   }
 }
 </style>
