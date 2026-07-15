@@ -107,33 +107,33 @@ function logout() {
             </span>
           </div>
 
+          <!-- Sayfa başında sabit, kompakt Tema Seçici Kapsül -->
+          <div class="theme-pill-top">
+            <button
+              class="theme-btn"
+              :class="{ active: theme === 'light' }"
+              @click="setTheme('light')"
+              title="Açık Temayı Seç"
+            >
+              <span>☀️</span> Açık
+            </button>
+            <button
+              class="theme-btn"
+              :class="{ active: theme === 'dark' }"
+              @click="setTheme('dark')"
+              title="Koyu Temayı Seç"
+            >
+              <span>🌙</span> Koyu
+            </button>
+          </div>
+
           <span class="user-name">{{ auth.user?.display_name }}</span>
-          <button class="btn btn-ghost btn-sm" @click="logout">Çıkış</button>
+          <button class="btn btn-ghost btn-sm logout-btn" @click="logout">Çıkış</button>
         </div>
       </div>
     </nav>
 
-    <!-- Floating Theme Switcher Pill (Bara Sıkışmaz, Hem Mobilde Hem Masaüstünde Şık ve Rahat Seçilir) -->
-    <div class="floating-theme-switch">
-      <button
-        class="theme-opt"
-        :class="{ active: theme === 'light' }"
-        @click="setTheme('light')"
-        title="Açık Temayı Seç"
-      >
-        <span>☀️</span> Açık
-      </button>
-      <button
-        class="theme-opt"
-        :class="{ active: theme === 'dark' }"
-        @click="setTheme('dark')"
-        title="Koyu Temayı Seç"
-      >
-        <span>🌙</span> Koyu
-      </button>
-    </div>
-
-    <!-- Mobile Bottom Navigation Bar -->
+    <!-- Mobile Bottom Navigation Bar (100% Solid Opacity so text never mixes) -->
     <div class="mobile-bottom-nav">
       <RouterLink to="/dashboard" class="mobile-nav-item">
         <span class="mob-icon">🏠</span>
@@ -155,13 +155,17 @@ function logout() {
 .navbar {
   position: sticky;
   top: 0;
-  z-index: 100;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  background: var(--bg-card);
+  z-index: 10000;
+  background: #13131f; /* Solid dark base by default */
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
   transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+[data-theme="light"] .navbar {
+  background: #ffffff !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06) !important;
 }
 
 .navbar-inner {
@@ -178,77 +182,82 @@ function logout() {
   gap: 0.625rem;
   color: var(--text-primary);
   text-decoration: none;
+  font-weight: 800;
+  font-size: 1.25rem;
+  transition: transform 0.2s;
   flex-shrink: 0;
+}
+
+.logo:hover {
+  transform: scale(1.02);
 }
 
 .custom-logo {
   width: 38px;
   height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 18px var(--accent-glow);
-  border-radius: 11px;
+  flex-shrink: 0;
 }
 
 .custom-logo svg {
-  width: 38px;
-  height: 38px;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 8px rgba(139, 92, 246, 0.3));
 }
 
 .logo-text {
-  font-weight: 800;
-  font-size: 1.15rem;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  white-space: nowrap;
+  gap: 0.5rem;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .rank-badge-top {
-  font-size: 0.75rem;
-  padding: 0.22rem 0.65rem;
-  border-radius: 999px;
+  font-size: 0.72rem;
   font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
   border: 1px solid;
-  transition: all 0.3s ease;
+  transition: all 0.3s;
   white-space: nowrap;
-  letter-spacing: 0.02em;
 }
 
 .nav-links {
   display: flex;
-  gap: 0.4rem;
   align-items: center;
-  flex-shrink: 0;
+  gap: 0.5rem;
 }
 
 .nav-link {
-  padding: 0.45rem 0.85rem;
-  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.92rem;
-  transition: all 0.2s;
   text-decoration: none;
-  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
 }
 
-.nav-link:hover,
-.nav-link.router-link-active {
+.nav-link:hover {
   color: var(--text-primary);
-  background: var(--bg-card-hover);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-link.router-link-active {
+  color: var(--accent);
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .quiz-link {
-  background: rgba(139, 92, 246, 0.15);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.15));
+  border: 1px solid rgba(139, 92, 246, 0.3);
   color: #c084fc;
-  border: 1px solid rgba(139, 92, 246, 0.35);
 }
 
-.quiz-link:hover {
-  background: rgba(139, 92, 246, 0.25);
-  box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+[data-theme="light"] .quiz-link {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(219, 39, 119, 0.12));
+  color: #4f46e5;
+  border-color: rgba(79, 70, 229, 0.3);
 }
 
 .nav-user {
@@ -261,79 +270,86 @@ function logout() {
 .gamify-badges {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .badge-item {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.7rem;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  white-space: nowrap;
-  flex-shrink: 0;
-  height: 32px;
-  line-height: 1;
 }
 
 .streak-badge {
-  color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.3);
-  background: rgba(251, 191, 36, 0.1);
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .xp-badge {
+  background: rgba(56, 189, 248, 0.15);
   color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.3);
-  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* Sayfa başında sabit, kompakt Tema Seçici Kapsül */
+.theme-pill-top {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  padding: 3px;
+  border-radius: 999px;
+}
+
+[data-theme="light"] .theme-pill-top {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-btn:hover {
+  color: var(--text-primary);
+}
+
+.theme-btn.active {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 .user-name {
-  font-size: 0.88rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.btn-sm {
-  padding: 0.45rem 0.85rem;
-  font-size: 0.8rem;
-  white-space: nowrap;
-  flex-shrink: 0;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
+  color: var(--text-secondary);
 }
 
 .mobile-bottom-nav {
   display: none;
 }
 
-/* Responsive Rules */
-.theme-toggle-btn {
-  font-size: 1.15rem;
-  padding: 0.35rem 0.6rem;
-}
-
-@media (max-width: 992px) {
-  .nav-link {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
-  }
-}
-
 @media (max-width: 768px) {
   .navbar-inner {
     padding: 0 0.75rem;
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
   .nav-links {
     display: none;
@@ -348,13 +364,18 @@ function logout() {
     gap: 0.4rem;
   }
   .rank-badge-top {
-    font-size: 0.68rem;
-    padding: 0.18rem 0.45rem;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
   }
   .logo-text {
-    font-size: 1.02rem;
+    font-size: 1.05rem;
     gap: 0.35rem;
   }
+  .theme-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  /* 100% Solid Mobile Bottom Navigation Bar */
   .mobile-bottom-nav {
     display: flex;
     position: fixed;
@@ -362,16 +383,19 @@ function logout() {
     left: 0;
     right: 0;
     height: 66px;
-    background: var(--bg-card);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-top: 1px solid var(--border);
-    z-index: 1000;
+    background: #13131f !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    z-index: 99999;
     justify-content: space-around;
     align-items: center;
     padding: 0 0.5rem;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 -6px 25px rgba(0, 0, 0, 0.4);
     transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  [data-theme="light"] .mobile-bottom-nav {
+    background: #ffffff !important;
+    border-top: 1px solid #cbd5e1 !important;
+    box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.1) !important;
   }
   .mobile-nav-item {
     display: flex;
@@ -393,6 +417,11 @@ function logout() {
     background: rgba(139, 92, 246, 0.15);
     border: 1px solid rgba(139, 92, 246, 0.3);
   }
+  [data-theme="light"] .mobile-nav-item.router-link-active {
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.12);
+    border: 1px solid rgba(79, 70, 229, 0.3);
+  }
   .mob-icon {
     font-size: 1.25rem;
   }
@@ -405,67 +434,9 @@ function logout() {
   .logo-text {
     font-size: 0.95rem;
   }
-}
-
-/* Floating Theme Switcher Pill (Hem Masastünde Hem Mobilde Şık, Sıkışmayan Seçici) */
-.floating-theme-switch {
-  position: fixed;
-  bottom: 84px;
-  right: 24px;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  padding: 5px;
-  border-radius: 999px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.floating-theme-switch:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 36px rgba(129, 140, 248, 0.3);
-  border-color: var(--accent);
-}
-
-.theme-opt {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.theme-opt:hover {
-  color: var(--text-primary);
-}
-
-.theme-opt.active {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
-}
-
-@media (max-width: 768px) {
-  .floating-theme-switch {
-    bottom: 80px;
-    right: 16px;
-    padding: 4px;
-  }
-  .theme-opt {
-    padding: 5px 11px;
-    font-size: 0.8rem;
+  .logout-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
   }
 }
 </style>

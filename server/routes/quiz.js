@@ -243,10 +243,23 @@ router.post('/answer', async (req, res) => {
       ])
     }
 
-    const gamification = await updateUserGamification(req.userId, correct ? earnedXp : 2)
-    res.json({ masteryLevel: newLevel, gamification })
+    // Seans tamamlanmadan önce doğrudan veritabanına XP eklemiyoruz, sadece oturumda kazanılan XP'yi döndürüyoruz.
+    const actualEarned = correct ? earnedXp : 2
+    res.json({ masteryLevel: newLevel, earnedXp: actualEarned })
   } catch (err) {
     res.status(500).json({ error: 'Cevap kaydedilemedi' })
+  }
+})
+
+// Seans başarıyla tamamlandığında tüm birikmiş XP'leri veritabanına kalıcı olarak ekle
+router.post('/finish', async (req, res) => {
+  const { totalXp = 0 } = req.body
+  try {
+    const gamification = await updateUserGamification(req.userId, Math.max(parseInt(totalXp, 10) || 0, 0))
+    res.json({ success: true, gamification })
+  } catch (err) {
+    console.error('Quiz bitiş XP kaydetme hatası:', err)
+    res.status(500).json({ error: 'XP kaydedilemedi' })
   }
 })
 

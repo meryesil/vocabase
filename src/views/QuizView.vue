@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import confetti from 'canvas-confetti'
 import { api } from '@/api/client.js'
 import { useAuthStore } from '@/stores/auth.js'
@@ -48,12 +48,39 @@ const questionHistory = ref({})
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
 
+onBeforeRouteLeave((to, from, next) => {
+  if (activeMode.value !== 'menu' && activeMode.value !== 'result' && totalAnswered.value > 0) {
+    const confirmLeave = window.confirm('⚠️ Seans henüz bitmedi! Çıkarsanız bu seansta kazandığınız XP\'leri kaybedeceksiniz. Çıkmak istediğinize emin misiniz?')
+    if (confirmLeave) {
+      earnedXpTotal.value = 0
+      next()
+    } else {
+      next(false)
+    }
+  } else {
+    next()
+  }
+})
+
+function handleBeforeUnload(e) {
+  if (activeMode.value !== 'menu' && activeMode.value !== 'result' && totalAnswered.value > 0) {
+    e.preventDefault()
+    e.returnValue = ''
+    return ''
+  }
+}
+
 onMounted(async () => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
   await vocab.fetchSections()
   if (route.query.mode) {
     activeMode.value = route.query.mode
     await startQuiz(route.query.mode)
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
 async function startQuiz(mode) {
@@ -146,13 +173,7 @@ async function handleMcAnswer(option) {
       earnedXp: isCorrect.value ? 10 : 2
     })
   })
-  if (res.gamification) {
-    earnedXpTotal.value += res.gamification.earnedXp || 0
-    if (vocab.stats) {
-      vocab.stats.xp = res.gamification.xp
-      vocab.stats.streakDays = res.gamification.streakDays
-    }
-  }
+  earnedXpTotal.value += res.earnedXp || (isCorrect.value ? 10 : 2)
 }
 
 function nextMcQuestion() {
@@ -186,13 +207,7 @@ async function rateFlashcard(remembered) {
       earnedXp: remembered ? 5 : 2
     })
   })
-  if (res.gamification) {
-    earnedXpTotal.value += res.gamification.earnedXp || 0
-    if (vocab.stats) {
-      vocab.stats.xp = res.gamification.xp
-      vocab.stats.streakDays = res.gamification.streakDays
-    }
-  }
+  earnedXpTotal.value += res.earnedXp || (remembered ? 5 : 2)
 
   isCardFlipped.value = false
   if (currentIndex.value + 1 < questions.value.length) {
@@ -223,11 +238,7 @@ function selectMatchOption(item, type) {
         method: 'POST',
         body: JSON.stringify({ wordId: selectedEn.value.id, correct: true, earnedXp: 8 })
       }).then((res) => {
-        if (res.gamification && vocab.stats) {
-          earnedXpTotal.value += res.gamification.earnedXp || 0
-          vocab.stats.xp = res.gamification.xp
-          vocab.stats.streakDays = res.gamification.streakDays
-        }
+        earnedXpTotal.value += res.earnedXp || 8
       })
 
       selectedEn.value = null
@@ -271,13 +282,7 @@ async function handleSpellingSubmit() {
       earnedXp: isCorrect.value ? 12 : 3
     })
   })
-  if (res.gamification) {
-    earnedXpTotal.value += res.gamification.earnedXp || 0
-    if (vocab.stats) {
-      vocab.stats.xp = res.gamification.xp
-      vocab.stats.streakDays = res.gamification.streakDays
-    }
-  }
+  earnedXpTotal.value += res.earnedXp || (isCorrect.value ? 12 : 3)
 }
 
 function nextSpellingQuestion() {
@@ -290,9 +295,25 @@ function nextSpellingQuestion() {
   }
 }
 
-function finishSession() {
+async function finishSession() {
   showResult.value = true
   activeMode.value = 'result'
+
+  if (earnedXpTotal.value > 0) {
+    try {
+      const res = await api('/quiz/finish', {
+        method: 'POST',
+        body: JSON.stringify({ totalXp: earnedXpTotal.value })
+      })
+      if (res.gamification && vocab.stats) {
+        vocab.stats.xp = res.gamification.xp
+        vocab.stats.streakDays = res.gamification.streakDays
+      }
+    } catch (e) {
+      console.error('Bitiş XP kaydetme hatası:', e)
+    }
+  }
+
   if (totalAnswered.value > 0 && score.value / totalAnswered.value >= 0.7) {
     confetti({
       particleCount: 120,
@@ -331,7 +352,8 @@ const academicRank = computed(() => {
 })
 
 function confirmExitMenu() {
-  if (confirm('Quiz/Çalışma devam ediyor! Menüye dönerseniz mevcut seans ilerlemeniz yarıda kalacak ve sıfırlanacaktır. Çıkmak istediğinize emin misiniz?')) {
+  if (confirm('⚠️ Seans devam ediyor! Menüye dönerseniz bu seansta kazandığınız XP\'ler kaybedilecektir. Çıkmak istediğinize emin misiniz?')) {
+    earnedXpTotal.value = 0
     activeMode.value = 'menu'
   }
 }
@@ -518,20 +540,20 @@ function previousQuestion() {
           </div>
         </div>
 
-        <div class="flashcard-actions">
-          <button class="btn btn-ghost fc-rate-btn again-btn" :disabled="isAnswered" @click="rateFlashcard(false)">
+        <div v-if="!isAnswered" class="flashcard-actions">
+          <button class="btn btn-ghost fc-rate-btn again-btn" @click="rateFlashcard(false)">
             <span class="btn-ic">🔄</span> Tekrar Bakmam Lazım
           </button>
-          <button class="btn btn-primary fc-rate-btn learned-btn" :disabled="isAnswered" @click="rateFlashcard(true)">
+          <button class="btn btn-primary fc-rate-btn learned-btn" @click="rateFlashcard(true)">
             <span class="btn-ic">✨</span> Çok İyi Biliyorum (+XP)
           </button>
         </div>
 
-        <div v-if="isAnswered" class="next-action mt-4">
-          <div class="fc-answered-badge glass-card mb-3 py-2 px-3">
-            {{ selectedAnswer === 'yes' ? '✨ Bu kartı bildiniz (+XP) olarak işaretlediniz.' : '🔄 Bu kartı tekrar çalışılacak olarak işaretlediniz.' }}
+        <div v-else class="next-action-card glass-card">
+          <div class="fc-answered-badge">
+            {{ selectedAnswer === 'yes' ? '✨ Harika! Bu kartı (+XP) olarak işaretlediniz.' : '🔄 Bu kartı tekrar çalışılacak olarak not ettik.' }}
           </div>
-          <button class="btn btn-primary btn-lg next-btn" @click="nextMcQuestion">
+          <button class="btn btn-primary btn-lg next-btn-spacious" @click="nextMcQuestion">
             {{ currentIndex + 1 < questions.length ? 'Sonraki Kart →' : 'Sonuçları Gör 🎉' }}
           </button>
         </div>
@@ -1101,6 +1123,32 @@ function previousQuestion() {
   box-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
 }
 
+.next-action-card {
+  margin-top: 1.5rem;
+  padding: 2rem 1.5rem;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  border: 1px dashed var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.fc-answered-badge {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.next-btn-spacious {
+  padding: 1rem 3rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+}
+
 /* MATCH BOARD */
 .match-instructions {
   padding: 1rem 1.25rem;
@@ -1434,6 +1482,21 @@ function previousQuestion() {
     width: 100%;
     max-width: 100%;
   }
+  .filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+    padding: 1.25rem 1rem !important;
+  }
+  .filter-item {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+  .filter-item select, .select-sm {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
   .spelling-form .input-row {
     flex-direction: column;
     gap: 0.75rem;
@@ -1499,5 +1562,55 @@ function previousQuestion() {
 [data-theme="light"] .rank-badge-card {
   background: #ffffff !important;
   border-color: var(--border) !important;
+}
+
+/* Light Mode Overrides for Flashcard Faces & Spelling Mode */
+[data-theme="light"] .fc-face {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme="light"] .fc-word,
+[data-theme="light"] .spell-tr,
+[data-theme="light"] .q-word {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .fc-word-tr {
+  color: #059669 !important;
+}
+
+[data-theme="light"] .fc-syn {
+  color: #0284c7 !important;
+}
+
+[data-theme="light"] .fc-ex {
+  color: #334155 !important;
+}
+
+[data-theme="light"] .fc-not {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .masked-sentence {
+  background: #f1f5f9 !important;
+  color: #1e1b4b !important;
+  border: 1px solid #cbd5e1 !important;
+  font-weight: 700;
+}
+
+[data-theme="light"] .select-sm,
+[data-theme="light"] .filter-bar select {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light"] .select-sm option,
+[data-theme="light"] .filter-bar select option {
+  background: #ffffff !important;
+  color: #0f172a !important;
 }
 </style>

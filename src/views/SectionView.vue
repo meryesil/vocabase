@@ -572,4 +572,9 @@ textarea.form-input {
   background: rgba(16, 185, 129, 0.28);
   transform: translateY(-1px);
 }
+
+[data-theme="light"] .section-header h1,
+[data-theme="light"] .word-card h3 {
+  color: #0f172a !important;
+}
 </style>

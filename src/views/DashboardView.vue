@@ -733,4 +733,16 @@ async function removeSection(id) {
     grid-template-columns: 1fr;
   }
 }
+
+[data-theme="light"] .banner-info h3,
+[data-theme="light"] .sections-header h2,
+[data-theme="light"] .section-card h3 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .starter-banner {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08) !important;
+}
 </style>
