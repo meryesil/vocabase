@@ -29,9 +29,9 @@ services:
       - DB_NAME=${DB_NAME:-vocabase_db}
       - JWT_SECRET=${JWT_SECRET:-super-secret-key-change-this-in-production}
     volumes:
-      - ./server:/app
+      - .:/app
       - /app/node_modules
-    command: sh -c "npm install && node index.js"
+    command: sh -c "npm install && node server/index.js"
     networks:
       - webnetwork
 
