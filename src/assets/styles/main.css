@@ -26,10 +26,10 @@
 }
 
 [data-theme="light"] {
-  --bg-primary: #f8fafc;
-  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-primary: #f0f4f8;
+  --bg-card: rgba(255, 255, 255, 0.92);
   --bg-card-hover: #ffffff;
-  --border: #e2e8f0;
+  --border: #cbd5e1;
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
@@ -41,13 +41,30 @@
 }
 
 [data-theme="light"] .glass-card {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
   border-color: #cbd5e1;
+  background: var(--bg-card);
+}
+
+[data-theme="light"] .glass-card:hover {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+  border-color: #94a3b8;
+  background: #ffffff;
 }
 
 [data-theme="light"] .form-input {
   background: #ffffff;
   border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+[data-theme="light"] .btn-ghost {
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .btn-ghost:hover {
+  background: #e2e8f0;
   color: #0f172a;
 }
 

@@ -14,7 +14,8 @@
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  background: #0a0a0f;
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 .orb {
@@ -22,6 +23,7 @@
   border-radius: 50%;
   filter: blur(80px);
   animation: float 20s ease-in-out infinite;
+  transition: opacity 0.3s ease, background 0.3s ease;
 }
 
 .orb-1 {
@@ -71,5 +73,24 @@
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 60px 60px;
   mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+}
+
+/* Light Theme Enhancements for Background Orbs */
+[data-theme="light"] .orb-1 {
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.18), transparent 70%);
+}
+[data-theme="light"] .orb-2 {
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.15), transparent 70%);
+}
+[data-theme="light"] .orb-3 {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.14), transparent 70%);
+}
+[data-theme="light"] .orb-4 {
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.12), transparent 70%);
+}
+[data-theme="light"] .grid-overlay {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
 }
 </style>

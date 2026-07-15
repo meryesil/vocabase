@@ -10,10 +10,10 @@ const vocab = useVocabularyStore()
 
 const theme = ref(localStorage.getItem('theme') || 'dark')
 
-function toggleTheme() {
-  theme.value = theme.value === 'dark' ? 'light' : 'dark'
-  localStorage.setItem('theme', theme.value)
-  document.documentElement.setAttribute('data-theme', theme.value)
+function setTheme(newTheme) {
+  theme.value = newTheme
+  localStorage.setItem('theme', newTheme)
+  document.documentElement.setAttribute('data-theme', newTheme)
 }
 
 const examPrefix = computed(() => {
@@ -98,14 +98,6 @@ function logout() {
         </div>
 
         <div class="nav-user">
-          <button
-            class="btn btn-ghost btn-sm theme-toggle-btn"
-            @click="toggleTheme"
-            :title="theme === 'dark' ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'"
-          >
-            {{ theme === 'dark' ? '☀️' : '🌙' }}
-          </button>
-
           <div v-if="vocab.stats" class="gamify-badges">
             <span class="badge-item streak-badge" title="Günlük Seri">
               🔥 <strong>{{ vocab.stats.streakDays || 0 }}</strong> Gün
@@ -120,6 +112,26 @@ function logout() {
         </div>
       </div>
     </nav>
+
+    <!-- Floating Theme Switcher Pill (Bara Sıkışmaz, Hem Mobilde Hem Masaüstünde Şık ve Rahat Seçilir) -->
+    <div class="floating-theme-switch">
+      <button
+        class="theme-opt"
+        :class="{ active: theme === 'light' }"
+        @click="setTheme('light')"
+        title="Açık Temayı Seç"
+      >
+        <span>☀️</span> Açık
+      </button>
+      <button
+        class="theme-opt"
+        :class="{ active: theme === 'dark' }"
+        @click="setTheme('dark')"
+        title="Koyu Temayı Seç"
+      >
+        <span>🌙</span> Koyu
+      </button>
+    </div>
 
     <!-- Mobile Bottom Navigation Bar -->
     <div class="mobile-bottom-nav">
@@ -146,9 +158,10 @@ function logout() {
   z-index: 100;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  background: rgba(10, 10, 15, 0.85);
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .navbar-inner {
@@ -349,7 +362,7 @@ function logout() {
     left: 0;
     right: 0;
     height: 66px;
-    background: rgba(12, 12, 20, 0.96);
+    background: var(--bg-card);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border-top: 1px solid var(--border);
@@ -357,7 +370,8 @@ function logout() {
     justify-content: space-around;
     align-items: center;
     padding: 0 0.5rem;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
   }
   .mobile-nav-item {
     display: flex;
@@ -390,6 +404,68 @@ function logout() {
   }
   .logo-text {
     font-size: 0.95rem;
+  }
+}
+
+/* Floating Theme Switcher Pill (Hem Masastünde Hem Mobilde Şık, Sıkışmayan Seçici) */
+.floating-theme-switch {
+  position: fixed;
+  bottom: 84px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 5px;
+  border-radius: 999px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-theme-switch:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(129, 140, 248, 0.3);
+  border-color: var(--accent);
+}
+
+.theme-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.theme-opt:hover {
+  color: var(--text-primary);
+}
+
+.theme-opt.active {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+}
+
+@media (max-width: 768px) {
+  .floating-theme-switch {
+    bottom: 80px;
+    right: 16px;
+    padding: 4px;
+  }
+  .theme-opt {
+    padding: 5px 11px;
+    font-size: 0.8rem;
   }
 }
 </style>

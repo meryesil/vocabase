@@ -539,8 +539,8 @@ async function handleJsonImport() {
 }
 
 .filter-select option {
-  background: #111118;
-  color: #fff;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .fav-toggle-btn {
@@ -885,8 +885,8 @@ async function handleJsonImport() {
 }
 
 select option {
-  background-color: #1e1e2e !important;
-  color: #f1f5f9 !important;
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
 }
 
 /* Mobile Responsiveness for WordsView */

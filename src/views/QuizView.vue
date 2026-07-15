@@ -1390,4 +1390,35 @@ function previousQuestion() {
     width: 100%;
   }
 }
+
+/* Dynamic Light Mode Enhancements for Quiz Cards and Options */
+[data-theme="light"] .option-btn,
+[data-theme="light"] .match-card {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] .option-btn:hover:not(:disabled),
+[data-theme="light"] .match-card:hover:not(.matched) {
+  background: #ffffff !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.12);
+}
+
+[data-theme="light"] .prev-btn {
+  background: #ffffff !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] .prev-btn:hover {
+  background: #f1f5f9 !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .rank-badge-card {
+  background: #ffffff !important;
+  border-color: var(--border) !important;
+}
 </style>
