@@ -10,7 +10,8 @@ const vocab = useVocabularyStore()
 
 const theme = ref(localStorage.getItem('theme') || 'dark')
 
-function setTheme(newTheme) {
+function toggleTheme() {
+  const newTheme = theme.value === 'dark' ? 'light' : 'dark'
   theme.value = newTheme
   localStorage.setItem('theme', newTheme)
   document.documentElement.setAttribute('data-theme', newTheme)
@@ -98,6 +99,14 @@ function logout() {
         </div>
 
         <div class="nav-user">
+          <button
+            class="btn btn-ghost btn-sm theme-toggle-btn"
+            @click="toggleTheme"
+            :title="theme === 'dark' ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'"
+          >
+            {{ theme === 'dark' ? '☀️' : '🌙' }}
+          </button>
+
           <div v-if="vocab.stats" class="gamify-badges">
             <span class="badge-item streak-badge" title="Günlük Seri">
               🔥 <strong>{{ vocab.stats.streakDays || 0 }}</strong> Gün
@@ -105,26 +114,6 @@ function logout() {
             <span class="badge-item xp-badge" title="Toplam Puan">
               ⚡ <strong>{{ vocab.stats.xp || 0 }}</strong> XP
             </span>
-          </div>
-
-          <!-- Sayfa başında sabit, kompakt Tema Seçici Kapsül -->
-          <div class="theme-pill-top">
-            <button
-              class="theme-btn"
-              :class="{ active: theme === 'light' }"
-              @click="setTheme('light')"
-              title="Açık Temayı Seç"
-            >
-              <span>☀️</span> Açık
-            </button>
-            <button
-              class="theme-btn"
-              :class="{ active: theme === 'dark' }"
-              @click="setTheme('dark')"
-              title="Koyu Temayı Seç"
-            >
-              <span>🌙</span> Koyu
-            </button>
           </div>
 
           <span class="user-name">{{ auth.user?.display_name }}</span>
@@ -295,45 +284,30 @@ function logout() {
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
-/* Sayfa başında sabit, kompakt Tema Seçici Kapsül */
-.theme-pill-top {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--border);
-  padding: 3px;
+/* Compact, Single-Icon Theme Switcher Button */
+.theme-toggle-btn {
+  font-size: 1.15rem;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border-radius: 999px;
-}
-
-[data-theme="light"] .theme-pill-top {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-.theme-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
-.theme-btn:hover {
-  color: var(--text-primary);
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
 }
 
-.theme-btn.active {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+[data-theme="light"] .theme-toggle-btn {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .user-name {
@@ -371,9 +345,10 @@ function logout() {
     font-size: 1.05rem;
     gap: 0.35rem;
   }
-  .theme-btn {
-    padding: 4px 8px;
-    font-size: 0.75rem;
+  .theme-toggle-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
   }
   /* 100% Solid Mobile Bottom Navigation Bar */
   .mobile-bottom-nav {
