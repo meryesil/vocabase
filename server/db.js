@@ -1,10 +1,31 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import pkg from 'pg'
 const { Pool } = pkg
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const envPath = path.join(__dirname, '..', '.env')
+if (fs.existsSync(envPath)) {
+  try {
+    const envConfig = fs.readFileSync(envPath, 'utf8')
+    for (const line of envConfig.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const [key, ...rest] = trimmed.split('=')
+      if (key && rest.length > 0 && process.env[key.trim()] === undefined) {
+        process.env[key.trim()] = rest.join('=').trim().replace(/^["']|["']$/g, '')
+      }
+    }
+  } catch (err) {
+    console.error('.env dosyası yüklenirken uyarı:', err.message)
+  }
+}
+
 const pool = new Pool({
   user: process.env.DB_USER || process.env.POSTGRES_USER || 'yeryesil_admin',
-  password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD,
-  host: process.env.DB_HOST || 'postgres-db',
+  password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || '',
+  host: process.env.DB_HOST || process.env.POSTGRES_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
   database: process.env.DB_NAME || process.env.POSTGRES_DB || 'vocabase_db',
 })

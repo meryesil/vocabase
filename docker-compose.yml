@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-yeryesil_admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-YOUR_SECRET_PASSWORD_HERE}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-GizliSifre123!}
       POSTGRES_DB: ${DB_NAME:-vocabase_db}
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
@@ -25,16 +25,13 @@ services:
       - DB_HOST=postgres-db
       - DB_PORT=5432
       - DB_USER=${DB_USER:-yeryesil_admin}
-      - DB_PASSWORD=${DB_PASSWORD:-YOUR_SECRET_PASSWORD_HERE}
+      - DB_PASSWORD=${DB_PASSWORD:-GizliSifre123!}
       - DB_NAME=${DB_NAME:-vocabase_db}
-      - JWT_SECRET=${JWT_SECRET:-YOUR_JWT_SECRET_KEY_HERE}
+      - JWT_SECRET=${JWT_SECRET:-super-secret-key-change-this-in-production}
     volumes:
       - ./server:/app
-      - ./package.json:/app/package.json
-      - ./package-lock.json:/app/package-lock.json
+      - /app/node_modules
     command: sh -c "npm install && node index.js"
-    ports:
-      - "5000:5000"
     networks:
       - webnetwork
 
@@ -52,4 +49,4 @@ services:
 
 networks:
   webnetwork:
-    external: true
+    driver: bridge
