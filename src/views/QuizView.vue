@@ -700,24 +700,39 @@ function previousQuestion() {
 .menu-header {
   text-align: center;
   margin-bottom: 2.5rem;
+  padding: 0 0.5rem;
 }
 
 .menu-header h1 {
-  font-size: 2.1rem;
+  font-size: clamp(1.4rem, 5vw, 2.2rem);
   font-weight: 800;
-  margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #fff, #c084fc);
+  margin-bottom: 0.6rem;
+  line-height: 1.3;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, #ffffff, #c084fc);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
+/* Light mode specific override so the gradient doesn't wash out on light background */
+[data-theme="light"] .menu-header h1 {
+  background: none;
+  -webkit-text-fill-color: initial;
+  color: #0f172a;
+  text-shadow: 0 1px 12px rgba(79, 70, 229, 0.15);
+}
+
 .subtitle {
   color: var(--text-secondary);
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 3vw, 1.05rem);
   max-width: 650px;
   margin: 0 auto 1.75rem;
   line-height: 1.6;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .error-banner {
@@ -1339,12 +1354,35 @@ function previousQuestion() {
 }
 
 @media (max-width: 768px) {
+  .menu-header h1 {
+    font-size: clamp(1.35rem, 5.5vw, 1.85rem);
+    line-height: 1.3;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
   .match-board {
     grid-template-columns: 1fr;
     gap: 1.25rem;
   }
   .modes-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .mode-card {
+    padding: 1.25rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.85rem;
+  }
+  .mode-info h3 {
+    font-size: 1.1rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  .mode-info p {
+    font-size: 0.85rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
   .res-stats {
     grid-template-columns: 1fr;
@@ -1353,11 +1391,35 @@ function previousQuestion() {
     grid-template-columns: 1fr;
     gap: 0.75rem;
   }
-  .question-card {
-    padding: 1.5rem 1rem;
+  .option-btn {
+    padding: 1.15rem 1rem;
+    font-size: clamp(0.92rem, 3.8vw, 1.05rem);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.4;
   }
-  .q-word {
-    font-size: 1.75rem;
+  .question-card, .fc-face {
+    padding: 1.75rem 1.15rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  .q-word, .fc-word, .fc-word-tr {
+    font-size: clamp(1.45rem, 6.5vw, 2rem);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.25;
+  }
+  .q-example, .fc-ex, .masked-sentence {
+    font-size: clamp(0.88rem, 3.6vw, 1rem);
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  .match-card {
+    padding: 0.85rem 0.75rem;
+    font-size: clamp(0.85rem, 3.5vw, 0.98rem);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.35;
   }
   .game-header {
     flex-direction: column;
@@ -1388,6 +1450,23 @@ function previousQuestion() {
   }
   .fc-rate-btn {
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .menu-header h1 {
+    font-size: 1.35rem;
+  }
+  .option-btn {
+    font-size: 0.9rem;
+    padding: 1rem 0.85rem;
+  }
+  .q-word, .fc-word, .fc-word-tr {
+    font-size: 1.45rem;
+  }
+  .match-card {
+    font-size: 0.85rem;
+    padding: 0.75rem 0.65rem;
   }
 }
 

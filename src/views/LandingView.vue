@@ -134,4 +134,11 @@ const features = [
   color: var(--text-secondary);
   line-height: 1.6;
 }
+
+[data-theme="light"] .gradient-text {
+  background: linear-gradient(135deg, #1e1b4b, #4f46e5, #9d174d);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 </style>
